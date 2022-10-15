@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 class Player:
     def __init__(self, z_type, fio, birthday=None, position=None, photo=None):
         """

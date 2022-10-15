@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from datetime import date
 from datetime import datetime
 from email import encoders
@@ -49,8 +50,8 @@ class PlayerEmail:
                 else:
                     text = f"\n{player.z_type}\n{player.fio}\n"
                     msg.attach(MIMEText(text, 'plain'))
-        except:
-            print("Error")
+        except Exception as err:
+            print(f"Ошибка при отправке: {err}")
                 
         smtpObj.sendmail(from_addr, to_addr, msg.as_string()) #Отправка
         smtpObj.quit() #Выход
@@ -68,9 +69,9 @@ class RegularEmail:
         smtpObj = smtplib.SMTP("smtp.gmail.com", 587) #Создание объекта SMTP
         smtpObj.starttls()  #Шифрование
 
-        from_addr = "alekseilapchik2001@gmail.com" #Адрес отправителя
-        to_addr =  "ithideout@yandex.ru" #Адрес получателя
-        smtpObj.login(from_addr,"unihqmxleirxkwxm") #Вход в аккаунт почты, используя 16-значный код
+        from_addr = "example@gmail.com" #Адрес отправителя
+        to_addr =  "example@yandex.ru" #Адрес получателя
+        smtpObj.login(from_addr,"Insert your 16-signed code") #Вход в аккаунт почты, используя 16-значный код
   
         msg = MIMEMultipart()
         #Тема
@@ -81,18 +82,19 @@ class RegularEmail:
             text = self.body
             msg.attach(MIMEText(text, 'plain'))
             #Вложения
-            part = MIMEBase('application', 'octet-stream')
             for attachment in self.attachments:
+                part = MIMEBase('application', 'octet-stream')
                 with open(attachment, "rb") as doc:
                     part.set_payload(doc.read())
                 encoders.encode_base64(part)
                 if attachment.startswith("images"):
                     part.add_header('Content-Disposition', 'attachment', filename=('utf-8', '', f"{datetime.now().strftime('%d%m%Y%H%M%S')}.jpg"))  
+                    msg.attach(part)
                 else:
-                    part.add_header('Content-Disposition', 'attachment', filename=('utf-8', '', str(attachment).replace("docs/", "")))
-                msg.attach(part)
-        except:
-            print("Error")
+                    part.add_header('Content-Disposition', 'attachment', filename=('utf-8', '', str(attachment).replace("docs\\", "")))
+                    msg.attach(part)
+        except Exception as err:
+            print(f"Ошибка при отправке: {err}")
         smtpObj.sendmail(from_addr, to_addr, msg.as_string()) #Отправка
         smtpObj.quit() #Выход
 

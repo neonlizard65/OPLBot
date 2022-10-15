@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-s
 import telebot
 from telebot import types
 from player import Player
@@ -9,14 +10,6 @@ from datetime import datetime
 #Экземпляр бота
 bot = telebot.TeleBot('INPUT_YOUR_TOKEN')
 
-############
-#TODO:
-#  -what if images are loaded instead of text and vice versa
-#  -links
-#  -docs
-#  -make it possible to write /start at any time
-#########
-
 #Текст для кнопок  
 item1text = "Дозаявить/отзаявить игрока"
 item2text = "Обращение/протест/апелляция (от лица команды)"
@@ -24,6 +17,7 @@ item3text = "Задать вопрос"
 item4text = "Предложить идею/жалоба (можно анонимно)"
 item5text = "Таблицы/календари/статистика/составы"
 item6text = "Документы"
+#Убрать
 item7text = "Заполнить протокол"
 item8text = "Контакты"
 item9text = "Подписаться на рассылку"
@@ -69,9 +63,9 @@ def startprocedure(message):
     mainmarkup.add(item4)
     mainmarkup.add(item5)
     mainmarkup.add(item6)
-    mainmarkup.add(item7)
+    #mainmarkup.add(item7)
     mainmarkup.add(item8)
-    mainmarkup.add(item9)
+    #mainmarkup.add(item9)
     mainmarkup.add(item10)
     bot.send_message(message.chat.id, "Выберите опцию:", reply_markup = mainmarkup)
     
@@ -110,7 +104,7 @@ def message_reply(message):
     #Дозаявить/отзаявить игрока
     if message.text == item1text:
         if len(senderinfo) < 1:
-            bot.reply_to(message, "Введите свою эл. почту или номер телефона (для обратной связи):", reply_markup=types.ReplyKeyboardRemove())
+            bot.reply_to(message, "Введите свою эл. почту:", reply_markup=types.ReplyKeyboardRemove())
             is_anon = False
             bot.register_next_step_handler(message, item1_message_hndlr)    
         else:
@@ -122,15 +116,14 @@ def message_reply(message):
     #Задать вопрос
     elif message.text == item3text:
         if len(senderinfo) < 1:
-            bot.reply_to(message, "Введите свою эл. почту или номер телефона (для обратной связи):", reply_markup=types.ReplyKeyboardRemove())
+            bot.reply_to(message, "Введите свою эл. почту (для обратной связи):", reply_markup=types.ReplyKeyboardRemove())
             is_anon = False
             bot.register_next_step_handler(message, item3_message_hndlr)
         else:
             item3_message_hndlr(message)
     #Предложить идею/жалоба (можно анонимно)
     elif message.text == item4text:
-        bot.reply_to(message, "Введите свою эл. почту или номер телефона (для обратной связи) или напишите слово \"Анонимно\":", reply_markup=types.ReplyKeyboardRemove())
-        is_anon = True
+        bot.reply_to(message, "Введите свою эл. почту или напишите \"Анонимно\":", reply_markup=types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, item4_message_hndlr)
     #Таблицы/календари/статистика/составы
     elif message.text == item5text:
@@ -149,7 +142,7 @@ def message_reply(message):
         item9_message_hndlr(message)  
     #Переделать контактные данные
     elif message.text == item10text:
-        bot.reply_to(message, "Введите свою эл. почту или номер телефона (для обратной связи):", reply_markup=types.ReplyKeyboardRemove())
+        bot.reply_to(message, "Введите свою эл. почту (для обратной связи):", reply_markup=types.ReplyKeyboardRemove())
         is_anon = False
         bot.register_next_step_handler(message, item10_message_hndlr)
         
@@ -165,6 +158,7 @@ def item1_message_hndlr(message):
     if len(senderinfo) < 1:
         senderinfo = message.text
     # Добавляем кнопки быстрого ввода текста
+    bot.reply_to(message, "Количество игроков в заявке не должно превышать 25 человек. Пожалуйста, проверьте заявку своей команды перед внесением изменений:\nhttps://bmfl.ru/%d0%be%d0%bf%d0%bb/:", reply_markup=types.ReplyKeyboardRemove()) 
     markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1=types.KeyboardButton('БМФЛЛ')
     item2=types.KeyboardButton('ЖМФЛЛ')
@@ -236,14 +230,14 @@ def zayavka_message_handler(message):
     global z_type
     if message.text == 'Заявка':
         z_type = 'Заявка'
-        bot.reply_to(message, "Введите ФИО игрока:", reply_markup = types.ReplyKeyboardRemove())
+        bot.reply_to(message, "Введите полностью фамилию имя и отчество игрока:", reply_markup = types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, fio_message_hndlr) #Обработка ФИО
     elif message.text == 'Отзаявка':
         z_type = 'Отзаявка'
-        bot.reply_to(message, "Введите ФИО игрока:", reply_markup = types.ReplyKeyboardRemove())
+        bot.reply_to(message, "Введите полностью фамилию имя и отчество игрока:", reply_markup = types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, fio_message_hndlr) #Обработка ФИО
     elif message.text == 'Вернуться на главное меню (письмо отправится на состояние последнего добавленного игрока)':
-        player_email = PlayerEmail(f"{league_name} {team_name}", senderinfo, players)
+        player_email = PlayerEmail(f'{league_name} {team_name}', senderinfo, players)
         player_email.sendEmail()
         bot.send_message(message.chat.id, "Письмо отправлено.", reply_markup=types.ReplyKeyboardRemove())
         startprocedure(message)
@@ -335,7 +329,7 @@ def handle_player_image(message):
         try:
             file_info = bot.get_file(message.photo[-1].file_id)
             downloaded_file = bot.download_file(file_info.file_path)
-            src = 'images/' + f"{fio.replace(' ', '_')}" + ".jpg" #Название фото
+            src = 'images\\' + f"{fio.replace(' ', '_')}" + ".jpg" #Название фото
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file)
             
@@ -353,9 +347,9 @@ def handle_player_image(message):
             markup.add(item2)
             bot.send_message(message.chat.id, "Дозаявить/отзаявить еще одного игрока?", reply_markup=markup)
             bot.register_next_step_handler(message, handle_continue_yes_no)
-        except:
-            print("Ошибка при загрузке изображения")
-            bot.reply_to(message, "Ошибка при загрузке файла", reply_markup=types.ReplyKeyboardRemove())    
+        except Exception as err:
+            print(f"Ошибка при загрузке файла: {err}")
+            bot.reply_to(message, f"Ошибка при загрузке файла: {err}", reply_markup=types.ReplyKeyboardRemove())    
             bot.reply_to(message, "Отправьте фото игрока:", reply_markup = types.ReplyKeyboardRemove())
             bot.register_next_step_handler(message, handle_player_image)
 
@@ -432,14 +426,14 @@ def attachment_hndlr(message):
         if message.document is not None:
             file_info = bot.get_file(message.document.file_id)
             downloaded_file = bot.download_file(file_info.file_path)
-            src = 'docs/' + message.document.file_name #Название фото
+            src = 'docs\\' + message.document.file_name #Название фото
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file)  
             attachments.append(src)
         elif message.photo is not None:
             file_info = bot.get_file(message.photo[-1].file_id)
             downloaded_file = bot.download_file(file_info.file_path)
-            src = 'images/' + f"{datetime.now().strftime('%d%m%Y%H%M%S')}.jpg" #Название фото
+            src = 'images\\' + f"{datetime.now().strftime('%d%m%Y%H%M%S')}.jpg" #Название фото
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file)
             attachments.append(src)
@@ -454,9 +448,9 @@ def attachment_hndlr(message):
 
         bot.reply_to(message, "Добавить еще вложение?", reply_markup=markup)    
         bot.register_next_step_handler(message, confirm_next_attach_hndlr)
-    except:
-        print("Ошибка при загрузке файла")
-        bot.reply_to(message, "Ошибка при загрузке файла", reply_markup=types.ReplyKeyboardRemove())    
+    except Exception as err:
+        print(f"Ошибка при загрузке файла: {err}")
+        bot.reply_to(message, f"Ошибка при загрузке файла: {err}", reply_markup=types.ReplyKeyboardRemove())    
         markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
         item1=types.KeyboardButton("Да")
         item2=types.KeyboardButton("Нет")
@@ -549,8 +543,12 @@ def item3_message_hndlr(message):
 @bot.message_handler(content_types='text')
 def item4_message_hndlr(message): 
     global senderinfo
-    if len(senderinfo)  < 1:
-        senderinfo = message.text
+    global is_anon
+    senderinfo = message.text
+    if "@" not in senderinfo:
+        is_anon = True
+    else:
+        is_anon = False
     # Добавляем кнопки
     markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1=types.KeyboardButton('Идея')
@@ -567,11 +565,11 @@ def idzhal_message_nhdlr(message):
     global vidobr
     if message.text == 'Идея':
         vidobr = "Идея"
-        bot.reply_to(message, "Введите содержание идеи:", reply_markup = types.ReplyKeyboardRemove())
+        bot.reply_to(message, "Введите содержание обращения:", reply_markup = types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, body_message_hndlr)
     elif message.text == 'Жалоба':
         vidobr = "Жалоба"
-        bot.reply_to(message, "Введите содержание жалобы:", reply_markup = types.ReplyKeyboardRemove())  
+        bot.reply_to(message, "Введите содержание обращения:", reply_markup = types.ReplyKeyboardRemove())  
         bot.register_next_step_handler(message, body_message_hndlr)
     elif message.text == 'Вернуться на главное меню':
         startprocedure(message)
@@ -590,39 +588,47 @@ def idzhal_message_nhdlr(message):
 #####################################################################################   
 #Ссылки
 
-####
-#TODO
-####
 @bot.message_handler(content_types='text')
 def item5_message_hndlr(message): 
     # Добавляем кнопки
     markup = types.InlineKeyboardMarkup()
-    btn_tables= types.InlineKeyboardButton(text='Сайт', url='https://bmfl.ru/')
-    markup.add(btn_tables)
-    bot.reply_to(message, "Ссылка на сайт:", reply_markup = markup)  
+    btn_bmfl= types.InlineKeyboardButton(text='БМФЛЛ', url='https://bmfl.ru/bmfll/')
+    btn_zhmfl= types.InlineKeyboardButton(text='ЖМФЛЛ', url='https://bmfl.ru/jmfll/')
+    btn_mflnr= types.InlineKeyboardButton(text='МФЛЛНР', url='https://bmfl.ru/ногинский-р-н/')
+    btn_emfl= types.InlineKeyboardButton(text='МЛФЛ', url='https://bmfl.ru/мытищи-турниры/')
+    btn_mlfl= types.InlineKeyboardButton(text='ЭМФЛЛ', url='https://bmfl.ru/emfll/')
+    
+    
+    markup.add(btn_bmfl)
+    markup.add(btn_zhmfl)
+    markup.add(btn_mflnr)
+    markup.add(btn_emfl)
+    markup.add(btn_mlfl)
+    bot.reply_to(message, "Ссылки на сайт:", reply_markup = markup)  
     
 
 #####################################################################################   
 #Если выбрана опция "Документы"
 #####################################################################################   
 
-####
-#TODO
-####
-
 def item6_message_hndlr(message): 
     # Добавляем кнопки
     markup = types.InlineKeyboardMarkup()
-    btn_tables= types.InlineKeyboardButton(text='Таблицы', url='https://bmfl.ru')
+    btn_regl= types.InlineKeyboardButton(text='Регламент ОПЛ', url='https://bmfl.ru/wp-content/uploads/2022/05/Reglament_OPL.pdf')
+    btn_ust= types.InlineKeyboardButton(text='Устав КДК', url='https://bmfl.ru/wp-content/uploads/2021/06/%D0%A3%D0%A1%D0%A2%D0%90%D0%92-%D0%9A%D0%94%D0%9A.pdf')
+    
 
-    markup.add(btn_tables)
+    markup.add(btn_regl)
+    markup.add(btn_ust)
+    bot.reply_to(message, "Ссылки на документы:", reply_markup = markup)  
+    
 
 
 #####################################################################################   
 #Если выбрана опция "Заполнить протокол"
 #####################################################################################   
 ####
-#TODO
+#На будущее
 ####
 
 def item7_message_hndlr(message): 
@@ -633,22 +639,21 @@ def item7_message_hndlr(message):
 #####################################################################################   
 #Если выбрана опция "Контакты"
 #####################################################################################   
-####
-#TODO
-####
+
 
 def item8_message_hndlr(message): 
     # Добавляем кнопки
     markup = types.InlineKeyboardMarkup()
-    btn_tables= types.InlineKeyboardButton(text='Таблицы', url='https://bmfl.ru')
-    markup.add(btn_tables)
+    btn_contacts= types.InlineKeyboardButton(text='Контакты', url='https://bmfl.ru/контакты/')
+    markup.add(btn_contacts)
+    bot.reply_to(message, "Ссылка на контакты:", reply_markup = markup)  
 
 
 #####################################################################################   
 #Если выбрана опция "Подписаться на рассылку"
 #####################################################################################   
 ####
-#TODO
+#На будущее
 ####
 
 def item9_message_hndlr(message): 
