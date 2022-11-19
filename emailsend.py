@@ -17,7 +17,8 @@ class PlayerEmail:
         self.senderinfo = senderinfo
 
     def sendEmail(self):
-        smtpObj = smtplib.SMTP("smtp.gmail.com", 587) #Создание объекта SMTP
+        #smtpObj = smtplib.SMTP("smtp.yandex.ru", 587) #Создание объекта SMTP yandex
+        smtpObj = smtplib.SMTP("smtp.gmail.com", 587) #Создание объекта SMTP gooogle
         smtpObj.starttls()  #Шифрование
 
         from_addr = "example@gmail.com" #Адрес отправителя
@@ -27,6 +28,7 @@ class PlayerEmail:
 
         #Сообщение
         msg = MIMEMultipart()
+        msg["From"] = from_addr
         msg["Subject"] = self.header #Тема
 
 
@@ -66,14 +68,15 @@ class RegularEmail:
         self.attachments = attachments
         
     def sendEmail(self):
-        smtpObj = smtplib.SMTP("smtp.gmail.com", 587) #Создание объекта SMTP
+       #smtpObj = smtplib.SMTP("smtp.yandex.ru", 587) #Создание объекта SMTP yandex
+        smtpObj = smtplib.SMTP("smtp.gmail.com", 587) #Создание объекта SMTP gooogle
         smtpObj.starttls()  #Шифрование
 
         from_addr = "example@gmail.com" #Адрес отправителя
         to_addr =  "example@yandex.ru" #Адрес получателя
-        smtpObj.login(from_addr,"Insert your 16-signed code") #Вход в аккаунт почты, используя 16-значный код
   
         msg = MIMEMultipart()
+        msg["From"] = from_addr
         #Тема
         msg["Subject"] = self.header 
               
@@ -87,11 +90,11 @@ class RegularEmail:
                 with open(attachment, "rb") as doc:
                     part.set_payload(doc.read())
                 encoders.encode_base64(part)
-                if attachment.startswith("images"):
+                if attachment.startswith("/var/www/www-root/data/www/oplbot.ru/images/"):
                     part.add_header('Content-Disposition', 'attachment', filename=('utf-8', '', f"{datetime.now().strftime('%d%m%Y%H%M%S')}.jpg"))  
                     msg.attach(part)
                 else:
-                    part.add_header('Content-Disposition', 'attachment', filename=('utf-8', '', str(attachment).replace("docs\\", "")))
+                    part.add_header('Content-Disposition', 'attachment', filename=('utf-8', '', str(attachment).replace("/var/www/www-root/data/www/oplbot.ru/docs/", "")))
                     msg.attach(part)
         except Exception as err:
             print(f"Ошибка при отправке: {err}")

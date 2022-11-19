@@ -4,8 +4,9 @@ from telebot import types
 from player import Player
 from emailsend import PlayerEmail
 from emailsend import RegularEmail
-from datetime import date
 from datetime import datetime
+
+from usercache import UserCache
 
 #Экземпляр бота
 bot = telebot.TeleBot('INPUT_YOUR_TOKEN')
@@ -13,53 +14,58 @@ bot = telebot.TeleBot('INPUT_YOUR_TOKEN')
 #Текст для кнопок  
 item1text = "Дозаявить/отзаявить игрока"
 item2text = "Обращение/протест/апелляция (от лица команды)"
-item3text = "Задать вопрос"
+#item3text = "Задать вопрос"
 item4text = "Предложить идею/жалоба (можно анонимно)"
 item5text = "Таблицы/календари/статистика/составы"
 item6text = "Документы"
-#Убрать
-item7text = "Заполнить протокол"
+#item7text = "Заполнить протокол"
 item8text = "Контакты"
-item9text = "Подписаться на рассылку"
+#item9text = "Подписаться на рассылку"
 item10text = "Изменить контактные данные"
 
+users = []
 
-attachments = [] #Вложения
-senderinfo = "" #Информация о пользователе 
-vidobr = "" #Вид обращения
-body = "" #Текстовое содержание
-league_name = ""
-team_name = ""
-z_type = ""
-fio = ""
-playerdate = ""
-position = ""
-players = [] #Игроки
-is_anon = False
+def check_user(message):
+    flag = False
+    for user in users:
+        if user.user_id == message.chat.id:
+            flag = True
+    if not flag:
+        user = UserCache(message.chat.id, senderinfo="", players=[], attachments=[])
+        users.append(user)
+        
+
+def get_user(message):
+    for user in users:
+        if message.chat.id == user.user_id:
+            return user
+
 
 # Функция, обрабатывающая команду /start
 @bot.message_handler(commands=["start"])
 def start(message, res=False):
+    check_user(message)
     startprocedure(message)
 
 # Выводит клаву с кнопками   
 def startprocedure(message):
+    
     # Добавляем кнопки
     mainmarkup=types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1=types.KeyboardButton(item1text)
     item2=types.KeyboardButton(item2text)
-    item3=types.KeyboardButton(item3text)
+    #item3=types.KeyboardButton(item3text)
     item4=types.KeyboardButton(item4text)
     item5=types.KeyboardButton(item5text)
     item6=types.KeyboardButton(item6text)
-    item7=types.KeyboardButton(item7text)
+    #item7=types.KeyboardButton(item7text)
     item8=types.KeyboardButton(item8text)
-    item9=types.KeyboardButton(item9text)
+    #item9=types.KeyboardButton(item9text)
     item10=types.KeyboardButton(item10text)
 
     mainmarkup.add(item1)
     mainmarkup.add(item2)
-    mainmarkup.add(item3)  
+    #mainmarkup.add(item3)  
     mainmarkup.add(item4)
     mainmarkup.add(item5)
     mainmarkup.add(item6)
@@ -70,57 +76,53 @@ def startprocedure(message):
     bot.send_message(message.chat.id, "Выберите опцию:", reply_markup = mainmarkup)
     
     #Очистка
-    global attachments
-    global vidobr
-    global body
-    global league_name
-    global team_name
-    global z_type
-    global fio
-    global playerdate
-    global position
-    global senderinfo
-    attachments.clear()
-    vidobr = "" 
-    body = "" 
-    league_name = ""
-    team_name = ""
-    z_type = ""
-    fio = ""
-    playerdate = ""
-    position = ""
-    players.clear()
-    
-    if is_anon is True:
-        senderinfo = ""
-    
+    check_user(message)
+    for user in users:
+        if message.chat.id == user.user_id:
+            user.senderinfo = ""
+            user.vidobr = ""
+            user.body = ""
+            if len(user.attachments) > 0: 
+                user.attachments.clear()
+            user.league_name = ""
+            user.team_name = ""
+            user.z_type = ""
+            user.fio = ""
+            user.playerdate = ""
+            user.position = ""
+            if len(user.players) > 0: 
+                user.players.clear()
+            user.is_anon = False
+            user.is_team = False
+        
     bot.register_next_step_handler(message, message_reply)    
     
 #Обработка клавиатуры старта
 @bot.message_handler(content_types='text')
 def message_reply(message): 
-    global senderinfo
-    global is_anon
+    check_user(message)
+    user = get_user(message)
     #Дозаявить/отзаявить игрока
     if message.text == item1text:
-        if len(senderinfo) < 1:
+        if len(user.senderinfo) < 1:
             bot.reply_to(message, "Введите свою эл. почту:", reply_markup=types.ReplyKeyboardRemove())
-            is_anon = False
             bot.register_next_step_handler(message, item1_message_hndlr)    
         else:
             item1_message_hndlr(message)
     #Обращение/протест/апелляция
     elif message.text == item2text:
-        is_anon = True
-        item2_message_hndlr(message)
-    #Задать вопрос
-    elif message.text == item3text:
-        if len(senderinfo) < 1:
-            bot.reply_to(message, "Введите свою эл. почту (для обратной связи):", reply_markup=types.ReplyKeyboardRemove())
-            is_anon = False
-            bot.register_next_step_handler(message, item3_message_hndlr)
+        if len(user.senderinfo) < 1:
+            bot.reply_to(message, "Введите свою эл. почту:", reply_markup=types.ReplyKeyboardRemove())
+            bot.register_next_step_handler(message, item2_message_hndlr)    
         else:
-            item3_message_hndlr(message)
+            item2_message_hndlr(message)
+    #Задать вопрос
+    #elif message.text == item3text:
+    #    if len(user.senderinfo) < 1:
+    #        bot.reply_to(message, "Введите свою эл. почту (для обратной связи):", reply_markup=types.ReplyKeyboardRemove())
+    #        bot.register_next_step_handler(message, item3_message_hndlr)
+    #    else:
+    #       item3_message_hndlr(message)
     #Предложить идею/жалоба (можно анонимно)
     elif message.text == item4text:
         bot.reply_to(message, "Введите свою эл. почту или напишите \"Анонимно\":", reply_markup=types.ReplyKeyboardRemove())
@@ -132,19 +134,19 @@ def message_reply(message):
     elif message.text == item6text:
         item6_message_hndlr(message)
     #Заполнить протокол
-    elif message.text == item7text:
-        item7_message_hndlr(message)
+    #elif message.text == item7text:
+    #    item7_message_hndlr(message)
     #Контакты
     elif message.text == item8text:
         item8_message_hndlr(message)
     #Подписаться на рассылку
-    elif message.text == item9text:
-        item9_message_hndlr(message)  
+    #elif message.text == item9text:
+    #    item9_message_hndlr(message)  
     #Переделать контактные данные
     elif message.text == item10text:
-        bot.reply_to(message, "Введите свою эл. почту (для обратной связи):", reply_markup=types.ReplyKeyboardRemove())
-        is_anon = False
+        bot.reply_to(message, "Введите эл. почту:", reply_markup=types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, item10_message_hndlr)
+        
         
 #####################################################################################   
 #Если выбрана опция "Дозаявить/отзаявить игрока"
@@ -154,9 +156,10 @@ def message_reply(message):
 @bot.message_handler(content_types='text')
 def item1_message_hndlr(message): 
     #Проверка наличия данных о пользователе
-    global senderinfo
-    if len(senderinfo) < 1:
-        senderinfo = message.text
+    check_user(message)
+    user = get_user(message)
+    if len(user.senderinfo) < 1:
+        user.senderinfo = message.text
     # Добавляем кнопки быстрого ввода текста
     bot.reply_to(message, "Количество игроков в заявке не должно превышать 25 человек. Пожалуйста, проверьте заявку своей команды перед внесением изменений:\nhttps://bmfl.ru/%d0%be%d0%bf%d0%bb/:", reply_markup=types.ReplyKeyboardRemove()) 
     markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -179,12 +182,13 @@ def item1_message_hndlr(message):
 @bot.message_handler(content_types='text')
 def league_name_message_hndlr(message): 
     #Проверка корректности ввода лиги
-    global league_name 
+    check_user(message)
+    user = get_user(message)
     leagues = ['БМФЛЛ', 'ЖМФЛЛ', 'МЛФЛ', 'ЭМФЛЛ', 'МФЛЛНР']
     league_input = str(message.text).strip().upper()
     #Если корректно, пользователь вводит название команды
     if league_input in leagues:
-        league_name = league_input
+        user.league_name = league_input
         bot.reply_to(message, "Введите название команды:", reply_markup = types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, team_name_message_hndlr) #Обработка ввода названия команды
     #Если выбрано "Вернуться на главное меню"
@@ -211,8 +215,9 @@ def league_name_message_hndlr(message):
 #Обработка ввода названия команды
 @bot.message_handler(content_types='text')
 def team_name_message_hndlr(message): 
-    global team_name 
-    team_name = message.text
+    check_user(message)
+    user = get_user(message)
+    user.team_name = message.text
     # Добавляем кнопки
     markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1=types.KeyboardButton('Заявка')
@@ -227,17 +232,18 @@ def team_name_message_hndlr(message):
 #Обработка типа заявки
 @bot.message_handler(content_types='text')
 def zayavka_message_handler(message): 
-    global z_type
+    check_user(message)
+    user = get_user(message)
     if message.text == 'Заявка':
-        z_type = 'Заявка'
+        user.z_type = 'Заявка'
         bot.reply_to(message, "Введите полностью фамилию имя и отчество игрока:", reply_markup = types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, fio_message_hndlr) #Обработка ФИО
     elif message.text == 'Отзаявка':
-        z_type = 'Отзаявка'
+        user.z_type = 'Отзаявка'
         bot.reply_to(message, "Введите полностью фамилию имя и отчество игрока:", reply_markup = types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, fio_message_hndlr) #Обработка ФИО
     elif message.text == 'Вернуться на главное меню (письмо отправится на состояние последнего добавленного игрока)':
-        player_email = PlayerEmail(f'{league_name} {team_name}', senderinfo, players)
+        player_email = PlayerEmail(f'{user.league_name} {user.team_name}', user.senderinfo, user.players)
         player_email.sendEmail()
         bot.send_message(message.chat.id, "Письмо отправлено.", reply_markup=types.ReplyKeyboardRemove())
         startprocedure(message)
@@ -259,18 +265,19 @@ def zayavka_message_handler(message):
 #Обработка ФИО
 @bot.message_handler(content_types='text')
 def fio_message_hndlr(message):
-    global fio
-    fio = message.text
+    check_user(message)
+    user = get_user(message)
+    user.fio = message.text
     #Заявка
-    if z_type == 'Заявка':
+    if user.z_type == 'Заявка':
         bot.reply_to(message, "Введите дату рождения игрока:")
         bot.register_next_step_handler(message, date_message_hndlr)
     #Отзаявка
     else:
-        players.append(Player(z_type, fio, None, None, None))
+        user.players.append(Player(user.z_type, user.fio, None, None, None))
         markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
         item1=types.KeyboardButton('Да')
-        item2=types.KeyboardButton('Нет')
+        item2=types.KeyboardButton('Отправить заявку')
         markup.add(item1)
         markup.add(item2)
         bot.send_message(message.chat.id, "Дозаявить/отзаявить еще одного игрока?", reply_markup=markup)
@@ -299,11 +306,12 @@ def date_message_hndlr(message):
 #Отправление фото
 @bot.message_handler(content_types='text')
 def position_message_hndlr(message):
-    global position
+    check_user(message)
+    user = get_user(message)
     positions = ['ВРТ', 'ЗАЩ', 'ПЗЩ', 'НАП']
     position_input = str(message.text).strip().upper()
     if position_input in positions:
-        position = message.text
+        user.position = message.text
         bot.reply_to(message, "Отправьте фото игрока:", reply_markup = types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, handle_player_image)
     elif message.text == 'Вернуться на главное меню':
@@ -321,28 +329,30 @@ def position_message_hndlr(message):
         markup.add(item4)
         markup.add(item5)
         bot.reply_to(message, "Выберите амплуа из предоставленного списка", reply_markup = markup)
+        bot.register_next_step_handler(message, position_message_hndlr)
 
 #Сохранение фото
 @bot.message_handler(content_types=['photo'])
 def handle_player_image(message):
-    if fio is not None:
+    check_user(message)
+    user = get_user(message)
+    if user.fio is not None:
         try:
             file_info = bot.get_file(message.photo[-1].file_id)
             downloaded_file = bot.download_file(file_info.file_path)
-            src = 'images\\' + f"{fio.replace(' ', '_')}" + ".jpg" #Название фото
+            src = '/var/www/www-root/data/www/oplbot.ru/images/' + f"{user.fio.replace(' ', '_')}" + ".jpg" #Название фото
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file)
             
             bot.reply_to(message, "Фото добавлено")
             
             #Записываем игрока в массив
-            global players
-            players.append(Player(z_type, fio, playerdate, position, src))
+            user.players.append(Player(user.z_type, user.fio, playerdate, user.position, src))
             
             # Добавляем кнопки
             markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
             item1=types.KeyboardButton('Да')
-            item2=types.KeyboardButton('Нет')
+            item2=types.KeyboardButton('Отправить заявку')
             markup.add(item1)
             markup.add(item2)
             bot.send_message(message.chat.id, "Дозаявить/отзаявить еще одного игрока?", reply_markup=markup)
@@ -356,7 +366,8 @@ def handle_player_image(message):
 #Продолжить - Да/Нет?
 @bot.message_handler(content_types='text')
 def handle_continue_yes_no(message):
-    global senderinfo
+    check_user(message)
+    user = get_user(message)
     if(message.text == 'Да'):
         # Добавляем кнопки
         markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -370,8 +381,8 @@ def handle_continue_yes_no(message):
         markup.add(item4)
         bot.reply_to(message, "Заявка/отзаявка:", reply_markup = markup)
         bot.register_next_step_handler(message, zayavka_message_handler)
-    elif(message.text == 'Нет'):
-        player_email = PlayerEmail(f"{league_name} {team_name}", senderinfo, players)
+    elif(message.text == 'Отправить заявку'):
+        player_email = PlayerEmail(f"{user.league_name} {user.team_name}", user.senderinfo, user.players)
         player_email.sendEmail()
         bot.send_message(message.chat.id, "Письмо отправлено.", reply_markup=types.ReplyKeyboardRemove())
         startprocedure(message)
@@ -384,8 +395,9 @@ def handle_continue_yes_no(message):
 #Обработка ввода тела письма 
 @bot.message_handler(content_types='text')
 def body_message_hndlr(message):
-    global body
-    body = message.text
+    check_user(message)
+    user = get_user(message)
+    user.body = message.text
     markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1=types.KeyboardButton("Да")
     item2=types.KeyboardButton("Нет")
@@ -399,12 +411,21 @@ def body_message_hndlr(message):
 #Обработка вопроса "Добавить еще вложения?"
 @bot.message_handler(content_types='text')
 def confirm_next_attach_hndlr(message):   
+    check_user(message)
+    user = get_user(message)
     if message.text == "Да":
         bot.reply_to(message, "Отправьте один файл", reply_markup=types.ReplyKeyboardRemove())    
         bot.register_next_step_handler(message, attachment_hndlr)
     elif message.text == "Нет":
-        letter = RegularEmail(f"{vidobr}: {senderinfo}", body, attachments)
-        letter.sendEmail()
+        if user.is_anon:
+            letter = RegularEmail(f"{user.vidobr}: Анонимно", user.body, user.attachments)
+            letter.sendEmail()
+        elif user.is_team:
+            letter = RegularEmail(f"{user.vidobr}: {user.team_name}", f"{user.senderinfo}\n{user.body}", user.attachments)
+            letter.sendEmail()
+        else:
+            letter = RegularEmail(f"{user.vidobr}", f"{user.senderinfo}\n{user.body}", user.attachments)
+            letter.sendEmail()
         bot.reply_to(message, "Письмо отправлено.", reply_markup=types.ReplyKeyboardRemove())   
         startprocedure(message)
     elif message.text == "Вернуться на главное меню (письмо не отправится)":
@@ -421,22 +442,23 @@ def confirm_next_attach_hndlr(message):
 #Обработка фото
 @bot.message_handler(content_types='photo')
 def attachment_hndlr(message):
-    global attachments
+    check_user(message)
+    user = get_user(message)
     try:
         if message.document is not None:
             file_info = bot.get_file(message.document.file_id)
             downloaded_file = bot.download_file(file_info.file_path)
-            src = 'docs\\' + message.document.file_name #Название фото
+            src = '/var/www/www-root/data/www/oplbot.ru/docs/' + message.document.file_name #Название фото
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file)  
-            attachments.append(src)
+            user.attachments.append(src)
         elif message.photo is not None:
             file_info = bot.get_file(message.photo[-1].file_id)
             downloaded_file = bot.download_file(file_info.file_path)
-            src = 'images\\' + f"{datetime.now().strftime('%d%m%Y%H%M%S')}.jpg" #Название фото
+            src = '/var/www/www-root/data/www/oplbot.ru/images/' + f"{datetime.now().strftime('%d%m%Y%H%M%S')}.jpg" #Название фото
             with open(src, 'wb') as new_file:
                 new_file.write(downloaded_file)
-            attachments.append(src)
+            user.attachments.append(src)
                 
         markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
         item1=types.KeyboardButton("Да")
@@ -463,20 +485,25 @@ def attachment_hndlr(message):
     
 
 #####################################################################################   
-#Если выбрана опция "Обращение/протест/апелляция"
+#Если выбрана опция "Обращение/протест/апелляция" (от лица команды)
 #####################################################################################   
 #Обработка опции "Обращение/протест/апелляция"
 @bot.message_handler(content_types='text')
 def item2_message_hndlr(message): 
+    check_user(message)
+    user = get_user(message)
+    if len(user.senderinfo)  < 1:
+        user.senderinfo = message.text
     bot.reply_to(message, "Введите название команды:", reply_markup=types.ReplyKeyboardRemove())   
     bot.register_next_step_handler(message, team_message_hndlr) #Обработка ввода названия команды
     
 #Обработка ввода названия команды
 @bot.message_handler(content_types='text')
 def team_message_hndlr(message):
-    global senderinfo
-    if len(senderinfo) < 1:
-        senderinfo = message.text
+    check_user(message)
+    user = get_user(message)
+    user.team_name = message.text
+    user.is_team = True
     # Добавляем кнопки
     markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1=types.KeyboardButton('Обращение')
@@ -493,19 +520,20 @@ def team_message_hndlr(message):
 #Обработка вида обращения
 @bot.message_handler(content_types='text')
 def vidobr_message_hndlr(message):
-    global vidobr
-    vidobr = ""
+    check_user(message)
+    user = get_user(message)
+    user.vidobr = ""
     if message.text == 'Обращение':
         bot.reply_to(message, "Введите текстовое содержание обращения:", reply_markup = types.ReplyKeyboardRemove())
-        vidobr = 'Обращение'
+        user.vidobr = 'Обращение'
         bot.register_next_step_handler(message, body_message_hndlr) #Обработка ввода тела письма 
     elif message.text == 'Протест':
         bot.reply_to(message, "Введите текстовое содержание протеста:", reply_markup = types.ReplyKeyboardRemove()) 
-        vidobr = 'Протест'
+        user.vidobr = 'Протест'
         bot.register_next_step_handler(message, body_message_hndlr) #Обработка ввода тела письма 
     elif message.text == 'Апелляция':
         bot.reply_to(message, "Введите текстовое содержание апелляции:", reply_markup = types.ReplyKeyboardRemove())
-        vidobr = 'Апелляция'
+        user.vidobr = 'Апелляция'
         bot.register_next_step_handler(message, body_message_hndlr) #Обработка ввода тела письма 
     elif message.text == 'Вернуться на главное меню':
         startprocedure(message)
@@ -529,26 +557,24 @@ def vidobr_message_hndlr(message):
 #####################################################################################       
 @bot.message_handler(content_types='text')
 def item3_message_hndlr(message): 
-    global senderinfo
-    global vidobr
-    vidobr = "Вопрос"
-    if len(senderinfo)  < 1:
-        senderinfo = message.text
+    check_user(message)
+    user = get_user(message)
+    user.vidobr = "Вопрос"
+    if len(user.senderinfo)  < 1:
+        user.senderinfo = message.text
     bot.reply_to(message, "Введите содержимое письма:", reply_markup = types.ReplyKeyboardRemove())
     bot.register_next_step_handler(message, body_message_hndlr)
 
 #####################################################################################   
-#Если выбрана опция "Предложить идею/жалоба"
+#Если выбрана опция "Предложить идею/жалоба" (анонимно)
 #####################################################################################   
 @bot.message_handler(content_types='text')
 def item4_message_hndlr(message): 
-    global senderinfo
-    global is_anon
-    senderinfo = message.text
-    if "@" not in senderinfo:
-        is_anon = True
-    else:
-        is_anon = False
+    check_user(message)
+    user = get_user(message)
+    if "@" not in message.text:
+        user.is_anon = True
+    user.senderinfo = message.text
     # Добавляем кнопки
     markup=types.ReplyKeyboardMarkup(resize_keyboard=True)
     item1=types.KeyboardButton('Идея')
@@ -562,13 +588,14 @@ def item4_message_hndlr(message):
     
 @bot.message_handler(content_types='text')
 def idzhal_message_nhdlr(message):
-    global vidobr
+    check_user(message)
+    user = get_user(message)
     if message.text == 'Идея':
-        vidobr = "Идея"
+        user.vidobr = "Идея"
         bot.reply_to(message, "Введите содержание обращения:", reply_markup = types.ReplyKeyboardRemove())
         bot.register_next_step_handler(message, body_message_hndlr)
     elif message.text == 'Жалоба':
-        vidobr = "Жалоба"
+        user.vidobr = "Жалоба"
         bot.reply_to(message, "Введите содержание обращения:", reply_markup = types.ReplyKeyboardRemove())  
         bot.register_next_step_handler(message, body_message_hndlr)
     elif message.text == 'Вернуться на главное меню':
@@ -581,7 +608,6 @@ def idzhal_message_nhdlr(message):
         markup.add(item2)
         bot.reply_to(message, "Выберите вид обращения из представленных:", reply_markup=markup)    
         bot.register_next_step_handler(message, idzhal_message_nhdlr)
-
 
 #####################################################################################   
 #Если выбрана опция "Таблицы/календари/статистика/составы"
@@ -644,9 +670,28 @@ def item7_message_hndlr(message):
 def item8_message_hndlr(message): 
     # Добавляем кнопки
     markup = types.InlineKeyboardMarkup()
-    btn_contacts= types.InlineKeyboardButton(text='Контакты', url='https://bmfl.ru/контакты/')
-    markup.add(btn_contacts)
-    bot.reply_to(message, "Ссылка на контакты:", reply_markup = markup)  
+
+    bot.reply_to(message, """
+Руководитель Объединенной Подмосквной Лиги
+Артемьев Артем Сергеевич
+Тел: +7(964)642-68-05
+
+Заместитель руководителя ОПЛ
+Лапчик Станислав Дмитриевич
+Тел: +7(919)996-44-45 
+
+Руководитель БМФЛЛ (Балашиха)
+Попов Василий Петрович
+Тел.: +7(926)589-54-00 
+
+Руководитель ЖМФЛЛ (Железнодорожный)
+Захаров Кирилл Валерьевич
+Тел.: +7(926)725-20-88 
+
+Руководитель МФЛЛНР и ЭМФЛЛ (Ногинск и Электросталь)
+Дружинин Станислав Владимирович
+Тел.: +7(925)152-40-77""")  
+    startprocedure(message)
 
 
 #####################################################################################   
@@ -660,16 +705,22 @@ def item9_message_hndlr(message):
     markup = types.InlineKeyboardMarkup()
     btn_tables= types.InlineKeyboardButton(text='Телеграмм ОПЛ', url='https://bmfl.ru')
     markup.add(btn_tables)
+    
 
 #####################################################################################   
 #Если выбрана опция "Поменять контактные данные"
 #####################################################################################   
 @bot.message_handler(content_types='text')
 def item10_message_hndlr(message): 
-    global senderinfo
-    senderinfo = message.text
+    check_user(message)
+    user = get_user(message)
+    user.senderinfo = message.text
     bot.reply_to(message, "Данные изменены.")
     startprocedure(message)
 
 # Запускаем бота
-bot.polling(none_stop=True, interval=0)
+while(True):
+    try:
+        bot.polling(none_stop=True, interval=0)
+    except Exception as err:
+        print(f"Ошибка, таймаут: {err}")
